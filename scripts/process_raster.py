@@ -7,11 +7,13 @@
 import georaster as gr
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
-from mpl_toolkits.basemap import Basemap
+#from mpl_toolkits.basemap import Basemap
 import numpy as np
 import os
 
+# Last updated: Jan 07, 2020
 # cd c:\Users\hpham\Documents\P32_Niger_2019\NWbud\scripts\
+
 '''
 OTHER NOTES
 # make sure georaster NOT georasterS
@@ -26,8 +28,13 @@ dataset = 'FAO WaPOR'  # 'FAO WaPOR' vs. 'USGS MODIS ETa'
 # dataset = 'USGS MODIS ETa'  # 'FAO WaPOR' vs. 'USGS MODIS ETa'
 #dataset = 'FAO WaPOR vs. USGS MODIS'
 
+if dataset == 'FAO WaPOR':
+    star_year, stop_year = 2009, 2019
+elif dataset == 'USGS MODIS ETa':
+    star_year, stop_year = 2003, 2018
+
 # [5] Create a new folder to save the figures
-odir = '../output/EVT/'
+odir = '../output/EVT/' + dataset + '/'
 if not os.path.exists(odir):  # Make a new directory if not exist
     os.makedirs(odir)
     print(f'\nCreated directory {odir}\n')
@@ -39,8 +46,7 @@ levels = range(0, 1700, 50)
 # levels = [0, 50, 300, 300, 400, 500, 700, 850, 1000, 3286]
 cmap = plt.get_cmap('jet')  # RdYlBu, gist_rainbow, bwr, jet, BuGn_r,
 
-for year in range(2009, 2019+1, 1):
-
+for year in range(star_year, stop_year + 1, 1):  # FAO
     if dataset == 'FAO WaPOR':
         ifile = data_path + 'EVT/FAO Actual ET and Interception ETIa/' + \
             'L2_NER_AETI_' + str(year)[-2:] + '.tif'  # FAO only Niger
@@ -48,8 +54,11 @@ for year in range(2009, 2019+1, 1):
         cof = 0.1  # the pixel value in the downloaded data must be multiplied by 0.1
         nodata_val = 0
     elif dataset == 'USGS MODIS ETa':
-        #ifile = 'y2018_modisSSEBopETv4_actual_mm.tif'
-        ifile = 'USGS MODIS2.tif'
+        # ifile = 'y2018_modisSSEBopETv4_actual_mm.tif' # Org file, worldwide
+        # ifile = 'y2003_modisSSEBopETv4_Clip1.tif'  # Clipped data for Niger
+        #ifile = 'USGS MODIS2.tif'
+        ifile = data_path + 'EVT/USGS MODIS ETa Clipped/y' + \
+            str(year) + '_modisSSEBopETv4_Clip1.tif'
         cof = 1
         nodata_val = 32767
     elif dataset == 'FAO WaPOR vs. USGS MODIS':
@@ -67,8 +76,8 @@ for year in range(2009, 2019+1, 1):
     my_image = gr.SingleBandRaster(ifile, load_data=extent, latlon=True)
     #my_image = gr.SingleBandRaster(ifile)
     # my_image = gr.SingleBandRaster(ifile, load_data=extent)
-    print(f'/nReading dataset: {ifile}')
     print(my_image.extent)
+    print(my_image.nx, my_image.ny)
 
     # Plotting ...
 
@@ -130,7 +139,8 @@ for year in range(2009, 2019+1, 1):
 
     plt.scatter(xt, yt, s=20, marker='o', c='k')
 
-    ofile = 'ET ' + str(year) + ' ' + dataset + '.png'
+    ofile = odir + 'ET ' + str(year) + ' ' + dataset + '.png'
     fig.savefig(ofile, dpi=300, transparent=False, bbox_inches='tight')
+    print(f'Outputs saved: {ofile}')
 
-# plt.show()
+plt.show()
