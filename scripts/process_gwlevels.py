@@ -23,11 +23,12 @@ from cartopy.mpl.geoaxes import GeoAxes
 GeoAxes._pcolormesh_patched = Axes.pcolormesh
 
 
-# Choose options to run:
-# Raw data (to combine two date columns), run once to get CaracteristiquesPEM_clean.csv
+# [1] Choose options to run:
+# [1.1] Raw data (to combine two date columns), run once to get CaracteristiquesPEM_clean.csv
 process_date = False
+
 opt_plot = True
-opt_get_ts = False  # Get time series for each well
+opt_get_ts = False  # Get time series for each well [not done yet]
 show_well_loc = True
 opt_contour = '_contour_'  # '_contour_' or leave it blank
 
@@ -35,7 +36,7 @@ opt_contour = '_contour_'  # '_contour_' or leave it blank
 # Use conda env irp
 # Last updated: 12/22/2019
 # Windows:  cd c:\Users\hpham\Dropbox\Study_2019_Dropbox\P32 Niger\00_codes\
-#           cd c:\Users\hpham\Documents\P32_Niger_2019\02_codes\
+#           cd c:\Users\hpham\Documents\P32_Niger_2019\NWbud\scripts\
 # MacOS:    cd Dropbox/Study_2019_Dropbox/P32\ Niger/
 
 
@@ -45,19 +46,15 @@ opt_contour = '_contour_'  # '_contour_' or leave it blank
 # Processed data by WB with depth
 #df = pd.read_csv('../01_gwlevel/PEM_WL_WRB.csv')
 
-# df = pd.read_csv('../01_gwlevel/CaracteristiquesPEM.csv',
-#                 encoding="ISO-8859-1")
+ifile = r'../input/gwlevel/CaracteristiquesPEM_clean.csv'
+df = pd.read_csv(ifile)
 
-df = pd.read_csv('../01_gwlevel/CaracteristiquesPEM_clean.csv')
-
-well_type = 'Deep'  # Shallow vs. Deep vs. All_wells
+well_type = 'Shallow'  # Shallow vs. Deep vs. All_wells
 if well_type == 'Shallow':
     thres_depth_min, thres_depth_max = -100, 50  # meter.
     # levels = [0,5,10,15,20,25,30,35,40,50]  # For gwlevels
 #    levels = [0,100,200,300,400,500,600]  # For gwlevels
     levels = range(100, 500, 25)
-
-
 elif well_type == 'Deep':
     thres_depth_min, thres_depth_max = 50, 1e3  # meter.
     # levels = [0,5,10,15,20,25,30,35,40,50,60,80,100,150,200,250]  # For gwlevels
@@ -69,7 +66,7 @@ elif well_type == 'All_wells':
     levels = range(0, 500, 25)
 
 # Open a file to print out results
-odir = 'out_gwlevel/'
+odir = '../output/gwlevel/'
 if not os.path.exists(odir):  # Make a new directory if not exist
     os.makedirs(odir)
     print(f'\nCreated directory {odir}\n')
@@ -78,6 +75,10 @@ f = open(ifile_out, 'w')
 
 #
 if process_date:
+    # raw data
+    ifile = r'../01_gwlevel/CaracteristiquesPEM.csv'
+    df = pd.read_csv(ifile, encoding="ISO-8859-1")
+
     # Define some input parameters
     col_keep = ['IRH PEM', 'Name PEM', 'XCoor', 'YCoor', 'Altitude', 'Static level', 'Flow',
                 'Start of Foration', 'End of Foration', 'Depth Drilled', 'Equipped depth']
@@ -118,8 +119,8 @@ df = df.reset_index()
 date = pd.to_datetime(df['Date'])
 print(f'Date min/max = {date.min().year}, {date.max().year} \n', file=f)
 
-ofile = odir + 'df_filtered.csv'
-df.to_csv(ofile)
+ofile = odir + 'df_filtered_' + well_type + '_wells.csv'
+df.to_csv(ofile, index=False)
 print(f'Filted gwlevels were saved at {ofile} \n', file=f)
 
 # Delete observations after 2020 (probably, due to typo)
@@ -127,6 +128,7 @@ df['Date'] = pd.to_datetime(df['Date'])
 check_date = pd.Timestamp(dt.date(1991, 1, 1))
 df = df[df['Date'] < check_date]
 print(f'Dataframe AFTER removing data > {check_date}: {df.shape}', file=f)
+print(f'(Considering the data before this year {check_date} as the pre-development condition)', file=f)
 date = pd.to_datetime(df['Date'])
 print(f'Date min/max = {date.min().year}, {date.max().year} \n', file=f)
 
