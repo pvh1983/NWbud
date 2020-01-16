@@ -7,7 +7,7 @@ import geopandas as gpd
 import georaster as gr
 import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
-# from mpl_toolkits.basemap import Basemap
+from mpl_toolkits.basemap import Basemap
 import numpy as np
 import os
 import pandas as pd
@@ -55,9 +55,9 @@ if get_spatio_temp_data:
     data_path = r'c:/Users/hpham/Documents/P32_Niger_2019/NWbud/input/'
 
     if dataset == 'FAO_WaPOR':
-        star_year, stop_year = 2009, 2010  # 2009, 2019
+        star_year, stop_year = 2009, 2019  # 2009, 2019
     elif dataset == 'USGS_MODIS':
-        star_year, stop_year = 2009, 2010  # 2003, 2018
+        star_year, stop_year = 2003, 2018  # 2003, 2018
 
     dfloc = pd.read_csv(ifile_loc)
 
@@ -127,9 +127,9 @@ if get_spatio_temp_data:
         norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
 
         # To use WGS84 coordinates:
-        #my_image = gr.SingleBandRaster(ifile, load_data=extent, latlon=True)
+        my_image = gr.SingleBandRaster(ifile, load_data=extent, latlon=True)
 
-        my_image = gr.SingleBandRaster(ifile, latlon=True)
+        #my_image = gr.SingleBandRaster(ifile, latlon=True)
         # my_image2 = gr.SingleBandRaster(ifile, load_data=extent)
         print(my_image.extent)
         print(my_image.nx, my_image.ny)
@@ -143,9 +143,11 @@ if get_spatio_temp_data:
         v = v.astype('float')
 
         # Testing a point
+        '''
         xt, yt, = 1.315733, 14.270843  # Long, Lat @ river
         val = my_image.value_at_coords(xt, yt, window=1)
         print(f'v={val} at the test point x={xt}, y={yt}')
+        '''
 
         if dataset == 'FAO_WaPOR':
             v[v < nodata_val] = 'nan'
@@ -184,7 +186,9 @@ if get_spatio_temp_data:
         for j, pname in enumerate(dfloc['Name']):
             xt = dfloc['Longitude'].iloc[j]
             yt = dfloc['Latitude'].iloc[j]
-            val = cof*my_image.value_at_coords(xt, yt, window=1)
+            icol, irow = my_image.coord_to_px(xt, yt)
+            val = cof*my_image.r[int(irow), int(icol)]
+            #val = cof*my_image.value_at_coords(xt, yt, window=1)
             dfts[pname].iloc[i] = val
             print(f'v={val} at x={xt}, y={yt}')
             if show_loc:
