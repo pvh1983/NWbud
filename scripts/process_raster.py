@@ -28,11 +28,11 @@ OTHER NOTES
 # [01] Get maps of EVT for each year and time series at given points
 get_spatio_temp_data = True
 show_loc = True  # Show locations where data are extracted.
-show_country_bou = False  # Show country boundaries
+show_country_bou = True  # Show country boundaries
 
 # [02] Plot and compare time series data
 #      run get_spatio_temp_data to get two input files
-plt_time_series_at_given_points = False
+plt_time_series_at_given_points = True
 
 
 # [03] Choosing a dataset to analyze
@@ -73,7 +73,7 @@ if get_spatio_temp_data:
     # levels = [0, 50, 300, 300, 400, 500, 700, 850, 1000, 3286]
     cmap = plt.get_cmap('jet')  # RdYlBu, gist_rainbow, bwr, jet, BuGn_r,
     ETdate = range(star_year, stop_year + 1, 1)
-    cols = ['Date'] + list(dfloc.Name)
+    cols = ['Date'] + ['ET_vol'] + list(dfloc.Name)
     dfts = pd.DataFrame(columns=cols)
     dfts['Date'] = ETdate
 
@@ -88,9 +88,14 @@ if get_spatio_temp_data:
             # ifile_Nbou = r'c:/Users/hpham/Documents/P32_Niger_2019/GIS_Niger/Niger_bou_converted.shp'
             ifile_Nbou = r'c:/Users/hpham/Documents/P32_Niger_2019/GIS_Niger/world_country_proj_new31.shp'
             nbou = gpd.GeoDataFrame.from_file(ifile_Nbou)
-
             nbou.plot(ax=ax, linewidth=1., color='None',
-                      edgecolor='k')
+                      edgecolor='#D5DCF9', alpha=0.8)
+
+            # Plot the survey area of 260,000 km2
+            ifile_study_area = r'c:/Users/hpham/Documents/P32_Niger_2019/GIS_Niger/Survey_area_260000_deg.shp'
+            study_area = gpd.GeoDataFrame.from_file(ifile_study_area)
+            study_area.plot(ax=ax, linewidth=1.,
+                            color='None', edgecolor='#ff3844', alpha=0.8)
             ax.set_xlim(xmin, xmax)
             ax.set_ylim(ymin, ymax)
 
@@ -104,15 +109,19 @@ if get_spatio_temp_data:
             # ifile = 'FAO_WaPOR2.tif'
             cof = 0.1  # the pixel value in the downloaded data must be multiplied by 0.1
             nodata_val = 0
+            xres, yres = 250, 250  # m
             ptitle1 = 'Actual EvapoTranspiration and Interception (mm)'
         elif dataset == 'USGS_MODIS':
-            # ifile = 'y2018_modisSSEBopETv4_actual_mm.tif' # Org file, worldwide
-            # ifile = 'y2003_modisSSEBopETv4_Clip1.tif'  # Clipped data for Niger
-            # ifile = 'USGS MODIS2.tif'
-            ifile = data_path + 'EVT/USGS_MODIS Clipped/y' + \
-                str(year) + '_modisSSEBopETv4_Clip1.tif'
+            # Original data
+            ifile = data_path + 'EVT/Annual Actual ET SSEBop ver4/y' + \
+                str(year) + '_modisSSEBopETv4_actual_mm.tif'
+            # Clipped data
+#            ifile = data_path + 'EVT/USGS_MODIS Clipped/y' + \
+#                str(year) + '_modisSSEBopETv4_Clip1.tif'
+
             cof = 1
             nodata_val = 32767
+            xres, yres = 1000, 1000  # m
             ptitle1 = 'Annual Actual Evapotranspiration (mm)'
         elif dataset == 'FAO_WaPOR vs. USGS MODIS':
             ifile = 'Difference1.tif'
@@ -133,7 +142,7 @@ if get_spatio_temp_data:
         # my_image2 = gr.SingleBandRaster(ifile, load_data=extent)
         print(my_image.extent)
         print(my_image.nx, my_image.ny)
-
+        #xres, yres = my_image.xres, my_image.yres
         # m = Basemap(width=12000000,height=9000000,projection='lcc',
         #            resolution='c',lat_1=45.,lat_2=55,lat_0=50,lon_0=-107.)
         # draw coastlines.
@@ -156,7 +165,7 @@ if get_spatio_temp_data:
 
         cmap_ = 'jet'
         # t = f'{ptitle1} in {year}. Source: ' + dataset
-        t = f'{ptitle1} in {year}.'
+        t = f'{ptitle1} in {year}'
         if dataset == 'FAO_WaPOR vs. USGS MODIS':
             t = 'ET_Diff (mm) = [USGS_MODIS] - [FAO_WaPOR]'
             cmap_ = 'bwr'
@@ -164,6 +173,10 @@ if get_spatio_temp_data:
 
         plt.imshow(v*cof, vmin=min(levels), vmax=max(levels), cmap=cmap_,  # cmap='viridis_r'
                    norm=norm, alpha=1, extent=extent)
+        sum_EVT = np.nansum(v)*xres*yres/1000  # from milimeter to meter
+        total_vol_EVT = cof*sum_EVT/1e9  # km3
+        dfts['ET_vol'].iloc[i] = total_vol_EVT
+        print(f'Total volume of ET = {total_vol_EVT} (km3) \n')
         # axs[2].contour(Z, levels, colors='k', origin='lower', extent=extent)
 
         plt.colorbar(shrink=0.5)
@@ -192,7 +205,8 @@ if get_spatio_temp_data:
             dfts[pname].iloc[i] = val
             print(f'v={val} at x={xt}, y={yt}')
             if show_loc:
-                plt.scatter(xt, yt, s=6, marker='o', c='k')
+                plt.scatter(xt, yt, s=12, marker='o', c='#ffff00',
+                            edgecolors='k', linewidths=0.25)
 
         # Save figures (one for each year)
         ofile = odir + 'ET ' + str(year) + ' ' + dataset + '.png'
@@ -222,11 +236,11 @@ if plt_time_series_at_given_points:
 
             x1 = df_fao.iloc[:, 0]
             y1 = df_fao.iloc[:, i+1]
-            sc1 = ax1.plot(x1, y1)
+            sc1 = ax1.plot(x1, y1, ':s')
 
             x2 = df_usgs.iloc[:, 0]
             y2 = df_usgs.iloc[:, i+1]
-            sc2 = ax1.plot(x2, y2)
+            sc2 = ax1.plot(x2, y2, ':^')
 
             if (i == 0 or i == 2 or i == 4):
                 ax1.set_ylabel('Annual Actual ET (mm)')
@@ -251,7 +265,9 @@ if plt_time_series_at_given_points:
         # fig1.colorbar(sc1, ax=ax1)
     ofile = '../output/EVT_time_series_comparison_' + loc_type + '.png'
     plt.savefig(ofile, dpi=300, transparent=False, bbox_inches='tight')
-    plt.show()
+
+
+#    plt.show()
     # plt.close()
 
     # dfts.plot()
