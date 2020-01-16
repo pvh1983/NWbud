@@ -22,6 +22,7 @@ OTHER NOTES
 # make sure georaster NOT georasterS
 # Use conda env irp
 # Make sure you choose a correct value for masking
+# Run all dataset to get *.csv file FIRSTLY.
 '''
 
 
@@ -36,30 +37,39 @@ plt_time_series_at_given_points = True
 
 
 # [03] Choosing a dataset to analyze
-dataset = 'FAO_WaPOR'  # 'FAO_WaPOR' vs. 'USGS_MODIS'
+dataset = 'FAO_WaPOR'  # 'FAO_WaPOR' vs. 'USGS_MODIS' vs. CHIRPS_5KM
 # dataset = 'USGS_MODIS'  # 'FAO_WaPOR' vs. 'USGS_MODIS'
 # dataset = 'FAO_WaPOR vs. USGS MODIS'
+dataset = 'CHIRPS_5KM'  # 'FAO_WaPOR' vs. 'USGS_MODIS'
 
 
 # [2] Read file to get the list of locations to extract time series
-loc_type = 'ground'  # 'borehole' or 'ground'
+loc_type = 'ground'  # 'borehole' or 'ground' or 'climate_station'
 if loc_type == 'borehole':
     ifile_loc = r'c:/Users/hpham/Documents/P32_Niger_2019/NWbud/input/borehole_location.csv'
     nrows, ncols = 9, 5
 elif loc_type == 'ground':
     ifile_loc = r'c:/Users/hpham/Documents/P32_Niger_2019/NWbud/input/ET_station.csv'
     nrows, ncols = 3, 2
+elif loc_type == 'climate_station':
+    ifile_loc = r'c:/Users/hpham/Documents/P32_Niger_2019/NWbud/input/Niger_weather_station.csv'
+    nrows, ncols = 5, 3
+
+dfloc = pd.read_csv(ifile_loc)
+
+# List of station's names
+sname = ['Birni N Konni', 'Magaria', 'Maradi Aero',
+         'Niamey Aero', 'Tahoua Aero', 'Zinder Aero']
+#sname = dfloc.Name.to_list()
 
 if get_spatio_temp_data:
     # Path to data directory
     data_path = r'c:/Users/hpham/Documents/P32_Niger_2019/NWbud/input/'
 
-    if dataset == 'FAO_WaPOR':
+    if (dataset == 'FAO_WaPOR' or dataset == 'CHIRPS_5KM'):
         star_year, stop_year = 2009, 2019  # 2009, 2019
     elif dataset == 'USGS_MODIS':
         star_year, stop_year = 2003, 2018  # 2003, 2018
-
-    dfloc = pd.read_csv(ifile_loc)
 
     # [5] Create a new folder to save the figures
     odir = '../output/EVT/' + dataset + '/'
@@ -130,6 +140,15 @@ if get_spatio_temp_data:
             cmap = plt.get_cmap('bwr')
             cof = 1
             nodata_val = -99999
+        elif dataset == 'CHIRPS_5KM':
+            ifile = data_path + 'PRECIP/CHIRPS_5KM/' + \
+                'L1_PCP_' + str(year)[-2:] + \
+                '.tif'  # FAO Africa (continantal)
+            #levels = range(0, 3700, 100)
+            cof = 0.1  # the pixel value in the downloaded data must be multiplied by 0.1
+            nodata_val = -9999
+            xres, yres = 5000, 5000  # m
+            ptitle1 = 'CHIRPS Annual Precipitation'
 
         print(f'Reading file {ifile} \n')
 
@@ -213,7 +232,7 @@ if get_spatio_temp_data:
         fig.savefig(ofile, dpi=300, transparent=False, bbox_inches='tight')
         print(f'Figures were saved: {ofile}')
 
-    ofile = '../output/EVT ' + dataset + '.csv'
+    ofile = '../output/EVT ' + dataset + '_' + loc_type + '.csv'
     dfts.to_csv(ofile, index=False)
 
 
@@ -224,55 +243,94 @@ if plt_time_series_at_given_points:
     df_usgs = pd.read_csv(ifile)
     ifile = r'c:/Users/hpham/Documents/P32_Niger_2019/NWbud/input/ET_obs.csv'
     df_etobs = pd.read_csv(ifile)
+    ifile = r'c:/Users/hpham/Documents/P32_Niger_2019/NWbud/output/EVT CHIRPS_5KM_ground.csv'
+    df_prep = pd.read_csv(ifile)
 
     fig1, axes1 = plt.subplots(
         nrows=nrows, ncols=ncols, sharex=True, sharey=False, figsize=(10, 10))
 
     for i, ax1 in enumerate(axes1.flatten()):
         # Only plot 44 subplots (because npoints=44)
-        if i <= df_fao.shape[1]-2:
-            # print(i)
-            ax1.set_title(df_fao.columns[i+1])
+        #        if i <= df_fao.shape[1]-2:
+        # print(i)
+        ax1.set_title(sname[i])
 
-            x1 = df_fao.iloc[:, 0]
-            y1 = df_fao.iloc[:, i+1]
-            sc1 = ax1.plot(x1, y1, ':s')
+        x1 = df_fao['Date']
+        y1 = df_fao[sname[i]]
+        sc1 = ax1.plot(x1, y1, ':s')
 
-            x2 = df_usgs.iloc[:, 0]
-            y2 = df_usgs.iloc[:, i+1]
-            sc2 = ax1.plot(x2, y2, ':^')
+        x2 = df_usgs['Date']
+        y2 = df_usgs[sname[i]]
+        sc2 = ax1.plot(x2, y2, ':^')
 
-            if (i == 0 or i == 2 or i == 4):
-                ax1.set_ylabel('Annual Actual ET (mm)')
+        if (i == 0 or i == 2 or i == 4):
+            ax1.set_ylabel('Annual Actual ET (mm)')
 
-            ax1.set_ylim([0, 1500])
-            ax1.tick_params(axis='x', rotation=90)
+        ax1.set_ylim([0, 2000])
+        ax1.tick_params(axis='x', rotation=90)
 
-            if loc_type == 'ground':
-                x3 = df_etobs.iloc[:, 0]
-                y3 = df_etobs.iloc[:, i+1]
-                sc3 = ax1.plot(x3, y3, '--o')
+        if loc_type == 'ground':
+            x3 = df_etobs['Date']
+            y3 = df_etobs[sname[i]]
+            sc3 = ax1.plot(x3, y3, '--o')
 
-            if (i == 0 and loc_type == 'ground'):
-                ax1.legend(['FAO_WaPOR', 'USGS MODIS',
-                            'Calculated Penman Monteith numbers'], fontsize=8)
-            elif (i == 0 and loc_type == 'borehole'):
-                ax1.legend(['FAO_WaPOR', 'USGS MODIS'], fontsize=8)
+        if (i == 0 and loc_type == 'ground'):
+            ax1.legend(['FAO_WaPOR', 'USGS MODIS',
+                        'Penman Monteith'], fontsize=8)
+        elif (i == 0 and loc_type == 'borehole'):
+            ax1.legend(['FAO_WaPOR', 'USGS MODIS'], fontsize=8)
 
-            ax1.grid(linewidth=0.1, color='c')
-            ax1.xaxis.set_ticks(range(2001, 2019+1, 1))
+        ax1.grid(linewidth=0.1, color='c')
+        ax1.xaxis.set_ticks(range(2001, 2019+1, 1))
 
+        # Plot CHIRPS annual precipitation
+        ax2 = ax1.twinx()
+
+        x4 = df_prep['Date']
+        y4 = df_prep[sname[i]]
+        sc4 = ax2.bar(x4, y4, width=0.6, alpha=0.6)
+        ax2.set_ylim([0, 3200])
+        ax2.invert_yaxis()
+        ax2.set_ylabel('Annual Precipitation (mm)', color='blue')
+        # ax2.set_
+        ax2.xaxis.set_ticks(range(2001, 2019+1, 1))
         # fig1.colorbar(sc1, ax=ax1)
     ofile = '../output/EVT_time_series_comparison_' + loc_type + '.png'
+    plt.savefig(ofile, dpi=300, transparent=False)  # bbox_inches='tight'
+
+    # Plot total volume of ET
+    fig2, ax2 = plt.subplots(nrows=1, ncols=1, figsize=(6, 5))
+
+    x1 = df_fao['Date']
+    y1 = df_fao['ET_vol']
+    sc1 = ax2.plot(x1, y1, ':s')
+
+    x2 = df_usgs['Date']
+    y2 = df_usgs['ET_vol']
+    sc2 = ax2.plot(x2, y2, ':^')
+
+    ax3 = ax2.twinx()
+
+    x3 = df_prep['Date']
+    y3 = df_prep['ET_vol']
+    sc4 = ax3.bar(x3, y3, width=0.5, alpha=0.8, align='center')
+    #sc4 = ax3.plot(x3, y3, '-x')
+    ax3.set_ylim([0, 3200])
+    ax3.invert_yaxis()
+
+    ax2.set_ylim([0, 2000])
+    ax2.tick_params(axis='x', rotation=90)
+    ax2.legend(['FAO_WaPOR', 'USGS MODIS'], loc='lower left')
+    ax2.set_ylabel('Total Volume of Evapotranspiration (km$^3$)')
+    ax3.set_ylabel('Total Volume of Precipitation (km$^3$)', color='blue')
+    ax2.grid(linewidth=0.1, color='c')
+    ax2.xaxis.set_ticks(range(2001, 2019+1, 1))
+    ax3.xaxis.set_ticks(range(2001, 2019+1, 1))
+    ofile = '../output/Total_EVT_volume_time_series_comparison_' + loc_type + '.png'
     plt.savefig(ofile, dpi=300, transparent=False, bbox_inches='tight')
 
 
-#    plt.show()
-    # plt.close()
-
-    # dfts.plot()
-
-    # plt.show()
+plt.show()
 
 
 # REFERENCES
