@@ -30,8 +30,9 @@ process_date = False
 opt_plot = True
 opt_get_ts = False  # Get time series for each well [not done yet]
 show_well_loc = True
-opt_contour = '_contour_'  # '_contour_' or leave it blank
+opt_contour = ''  # '_contour_' or leave it blank
 
+cutoff_year = 2020
 
 # Use conda env irp
 # Last updated: 12/22/2019
@@ -49,7 +50,7 @@ opt_contour = '_contour_'  # '_contour_' or leave it blank
 ifile = r'../input/gwlevel/CaracteristiquesPEM_clean.csv'
 df = pd.read_csv(ifile)
 
-well_type = 'Shallow'  # Shallow vs. Deep vs. All_wells
+well_type = 'All_wells'  # Shallow vs. Deep vs. All_wells
 if well_type == 'Shallow':
     thres_depth_min, thres_depth_max = -100, 50  # meter.
     # levels = [0,5,10,15,20,25,30,35,40,50]  # For gwlevels
@@ -61,9 +62,9 @@ elif well_type == 'Deep':
 #    levels = [0,100,200,300,400,500,600]  # For gwlevels
     levels = range(100, 500, 25)
 elif well_type == 'All_wells':
-    thres_depth_min, thres_depth_max = -1e2, 1e3  # meter.
+    thres_depth_min, thres_depth_max = -100, 1e3  # meter.
     # levels = [0,5,10,15,20,25,30,35,40,60,80,100,150,200]  # For gwlevels
-    levels = range(0, 500, 25)
+    levels = range(100, 500, 25)
 
 # Open a file to print out results
 odir = '../output/gwlevel/'
@@ -76,8 +77,8 @@ f = open(ifile_out, 'w')
 #
 if process_date:
     # raw data
-    ifile = r'../01_gwlevel/CaracteristiquesPEM.csv'
-    df = pd.read_csv(ifile, encoding="ISO-8859-1")
+    #ifile = r'../_gwlevel/CaracteristiquesPEM.csv'
+    #df = pd.read_csv(ifile, encoding="ISO-8859-1")
 
     # Define some input parameters
     col_keep = ['IRH PEM', 'Name PEM', 'XCoor', 'YCoor', 'Altitude', 'Static level', 'Flow',
@@ -95,19 +96,30 @@ if process_date:
 
     df.to_csv('CaracteristiquesPEM_clean.csv', index=None)
 
-print(f'Dataframe before removing NaN is: {df.shape}', file=f)
+print(f'Original Dataframe size: {df.shape}', file=f)
 
-df = df.dropna(subset=['XCoor', 'YCoor', 'Date'])
-print(f'Dataframe AFTER removing NaN is: {df.shape}', file=f)
+df = df.dropna(subset=['XCoor', 'YCoor'])
+print(
+    f'Dataframe AFTER removing NaN of columns [XCoor, YCoor] is: {df.shape}', file=f)
+
+df = df.dropna(subset=['Date'])
+print(
+    f'Dataframe AFTER removing NaN rows of column [Date] is: {df.shape}', file=f)
 
 df = df.dropna(subset=['Depth Drilled'])
 print(f'Dataframe AFTER removing depth NaN is: {df.shape}', file=f)
 
 df = df.dropna(subset=['Static level'])
-print(f'Dataframe AFTER removing Static level NaN is: {df.shape}', file=f)
+print(
+    f'Dataframe AFTER removing NaN rows of [Static level] colu  is: {df.shape}', file=f)
 
 df = df.dropna(subset=['Altitude'])
-print(f'Dataframe AFTER removing Altitude NaN is: {df.shape}', file=f)
+print(
+    f'Dataframe AFTER removing NaN rows of [Altitude] is: {df.shape}', file=f)
+
+df = df.dropna(subset=['Name PEM'])
+print(
+    f'Dataframe AFTER removing NaN rows of column [Name PEM] is: {df.shape}', file=f)
 
 
 df = df[df['Depth Drilled'] > thres_depth_min]
@@ -117,7 +129,8 @@ print(
 df = df.reset_index()
 
 date = pd.to_datetime(df['Date'])
-print(f'Date min/max = {date.min().year}, {date.max().year} \n', file=f)
+print(
+    f'Date min/max of the current dataframe: {date.min().year}, {date.max().year} \n', file=f)
 
 ofile = odir + 'df_filtered_' + well_type + '_wells.csv'
 df.to_csv(ofile, index=False)
@@ -125,12 +138,18 @@ print(f'Filted gwlevels were saved at {ofile} \n', file=f)
 
 # Delete observations after 2020 (probably, due to typo)
 df['Date'] = pd.to_datetime(df['Date'])
-check_date = pd.Timestamp(dt.date(1991, 1, 1))
+check_date = pd.Timestamp(dt.date(cutoff_year, 1, 1))
 df = df[df['Date'] < check_date]
-print(f'Dataframe AFTER removing data > {check_date}: {df.shape}', file=f)
-print(f'(Considering the data before this year {check_date} as the pre-development condition)', file=f)
+print(
+    f'Dataframe AFTER removing data measured after > {check_date}: {df.shape}', file=f)
+# print(
+#    f'(Considering the data before this year {check_date} as the pre-development condition)', file=f)
 date = pd.to_datetime(df['Date'])
 print(f'Date min/max = {date.min().year}, {date.max().year} \n', file=f)
+
+date = pd.to_datetime(df['Date'])
+print(
+    f'Date min/max of the current dataframe: {date.min().year}, {date.max().year} \n', file=f)
 
 #check_gwdepth_thre = 500
 #df = df[df['Static level'] < check_gwdepth_thre]
