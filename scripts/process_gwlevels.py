@@ -2,24 +2,7 @@
 from func4gwlevel import *
 import pandas as pd
 import os
-#import sys
 
-
-#import geopandas as gpd
-#from scipy.ndimage.filters import gaussian_filter
-#import scipy.interpolate
-#import cartopy.crs as ccrs
-#import cartopy.feature as cfeature
-#from mpl_toolkits.basemap import Basemap
-
-#from metpy.cbook import get_test_data
-# from metpy.interpolate import (interpolate_to_grid, remove_nan_observations,
-#                               remove_repeat_coordinates)
-#from metpy.plots import add_metpy_logo
-
-#from matplotlib.axes import Axes
-#from cartopy.mpl.geoaxes import GeoAxes
-#GeoAxes._pcolormesh_patched = Axes.pcolormesh
 
 # Use conda env irp
 # Last updated: 01/30/2020
@@ -29,62 +12,92 @@ import os
 # [1] Choose options to run:
 # [1.1] Raw data (to combine two date columns),
 # run once to get ../input/CaracteristiquesPEM_clean.csv
-opt_process_raw_data = False
 
-# [1.2] Clean up the data (after 1.1)
-opt_cleanup_data = False
-opt_plot_gwlevel_vs_year = True
-opt_get_mean_gwlevel_given_year = False
+'''
+LIST OF DAT SETS
+1. CaracteristiquesPEM.xls (Ministry of Hydraulic2s)
+2. Wells data REGION DE MARADI.xlsx (Alan Fryar)
+3. PEUEMOABERIAF Wells.csv (received 2020-01-24)
+4. Données Puits Copie de PEM FALMEY, DOSSO, GAYA (5).xls (received from Michel Wakil 2020-01-28)
+[See email KP Jan 30, 2020]
+Link to dataset: 
+https://dri0-my.sharepoint.com/:f:/g/personal/karl_pohlmann_dri_edu/Eqiq6bElA6NNpWUZEFCoGnkBYEGscPu3cAnS-_qOCaASbA?e=jYIkR0
+
+'''
+
+# [Step 1] ====================================================================
+opt_process_raw_data = True
+# Choose one of four availale raw files
+# 1 'Ministry of Hydraulics', 2 'Alan Fryar', 3 'PEUEMOABERIAF', 4 'Michel Wakil',
+# 5 Ministry_of_Hydraulics_new_altitude
+dataset_in = 'Ministry_of_Hydraulics_new_altitude'
+ifile_raw = choosing_dataset(dataset_in)
+
+
+# [Step 2] Clean up the data ==================================================
+opt_cleanup_data = True
+opt_plot_gwlevel_vs_year = False
+
+# [Step 3] Mapping in 2D ======================================================
 opt_map_gwlevel_in2D = False
-opt_get_ts = False  # Get time series for each well [not done yet]
 show_well_loc = False
 opt_contour = ''  # '_contour_' or leave it blank
-cutoff_year = 2020
 
+# [Step 4] Get mean and time series ===========================================
+opt_get_mean_gwlevel_given_year = False
+cutoff_year = 2020  # to eleminate typos in year.
+min_nobs = 2  # To find wells with long-term observations
 
-well_type = 'All_wells'  # Shallow vs. Deep vs. All_wells
+# Some options ================================================================
+well_type = 'All'  # Shallow vs. Deep vs. All
 thres_depth_min, thres_depth_max, levels = get_par_4well_depth(well_type)
 
-# Open a file to print out results
-odir = '../output/gwlevel/'
+# Create a new directory to save outputs
+odir = '../output/gwlevel/' + dataset_in + '/'
 if not os.path.exists(odir):  # Make a new directory if not exist
     os.makedirs(odir)
     print(f'\nCreated directory {odir}\n')
 
-
 # Process raw data CaracteristiquesPEM.xls (Ministry of Hydraulics)
 if opt_process_raw_data:
-    ifile_raw = r'../_gwlevel/CaracteristiquesPEM.csv'
+    print(f'\nReading raw data file {ifile_raw}\n')
     df = pd.read_csv(ifile_raw, encoding="ISO-8859-1")
-    proceess_raw_data(df)
+    proceess_raw_data(df, dataset_in)
 
 if opt_cleanup_data:
-    print('\nRunning opt_cleanup_data ... \n')
-    ifile = r'../input/gwlevel/CaracteristiquesPEM_clean.csv'
-    ifile_log_out = odir + 'logs_gwlevels_' + well_type + '_wells.txt'
+    print('\nRunning Step 2: opt_cleanup_data ... \n')
+    #ifile = r'../input/gwlevel/CaracteristiquesPEM_clean.csv'
+    ifile = odir + dataset_in + ' dataset clean.csv'
+    ifile_log_out = odir + 'logs ' + dataset_in + ' ' + well_type + ' wells.txt'
     df = func_cleanup_data(ifile, ifile_log_out,
-                           thres_depth_min, thres_depth_max, well_type, odir, cutoff_year)
+                           thres_depth_min, thres_depth_max, well_type, odir, cutoff_year, dataset_in)
 
-# Get mean of gwlevels at the same location but different time
-if opt_get_mean_gwlevel_given_year:
-    ifile_gwlevel_clean = odir + 'df_filtered_' + well_type + '_wells.csv'
-    df = pd.read_csv(ifile_gwlevel_clean)
-    df_mean = func_get_mean_gwlevel_given_year(df)
-
-# [] Plot groundwater levels vs years
+# Plot groundwater levels vs years
 if opt_plot_gwlevel_vs_year:
-    ifile_gwlevel_clean = odir + 'df_filtered_' + well_type + '_wells.csv'
+    ifile_gwlevel_clean = odir + 'df_filtered ' + \
+        dataset_in + ' ' + well_type + ' wells.csv'
     df = pd.read_csv(ifile_gwlevel_clean)
-    func_plot_gwlevel_vs_year(df, odir, well_type)
-    
+    func_plot_gwlevel_vs_year(df, odir, well_type, dataset_in)
 
-# Group by well names
-if opt_get_ts:
-    wname = df['Name PEM'].unique()
-
-
+# Map the location of measurements and generate gwlevel contours
 if opt_map_gwlevel_in2D:
-    func_map_gwlevel_in2D()
+    # [latmin, latmax, longmin, longmax]
+    xmin, xmax, ymin, ymax = [0, 16, 10, 24]
+    domain = [xmin, xmax, ymin, ymax]
+    ifile_gwlevel_clean = odir + 'df_filtered ' + \
+        dataset_in + ' ' + well_type + ' wells.csv'
+    df = pd.read_csv(ifile_gwlevel_clean)
+    func_map_gwlevel_in2D(df, domain, levels, opt_contour,
+                          show_well_loc, odir, well_type, dataset_in)
+
+
+# [] Get mean of gwlevels at the same location but different time
+if opt_get_mean_gwlevel_given_year:
+    ifile_gwlevel_clean = odir + 'df_filtered ' + \
+        dataset_in + ' ' + well_type + ' wells.csv'
+    print(f'\nReading input file {ifile_gwlevel_clean}\n')
+    df = pd.read_csv(ifile_gwlevel_clean)
+    df_mean = func_get_mean_gwlevel_given_year(df, min_nobs, odir)
 
 
 print('Done all!')
