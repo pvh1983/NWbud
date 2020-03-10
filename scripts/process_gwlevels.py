@@ -26,16 +26,16 @@ https://dri0-my.sharepoint.com/:f:/g/personal/karl_pohlmann_dri_edu/Eqiq6bElA6NN
 '''
 
 # [Step 1] ====================================================================
-opt_process_raw_data = True
+opt_process_raw_data = False
 # Choose one of four availale raw files
 # 1 'Ministry of Hydraulics', 2 'Alan Fryar', 3 'PEUEMOABERIAF', 4 'Michel Wakil',
-# 5 Ministry_of_Hydraulics_new_altitude
-dataset_in = 'Ministry_of_Hydraulics_new_altitude'
+# 5 Ministry_of_Hydraulics_new_altitude, 6: Alan Fryar with altitude
+dataset_in = 'Alan Fryar with altitude'
 ifile_raw = choosing_dataset(dataset_in)
 
 
 # [Step 2] Clean up the data ==================================================
-opt_cleanup_data = True
+opt_cleanup_data = False
 opt_plot_gwlevel_vs_year = False
 
 # [Step 3] Mapping in 2D ======================================================
@@ -76,7 +76,7 @@ if opt_cleanup_data:
 if opt_plot_gwlevel_vs_year:
     ifile_gwlevel_clean = odir + 'df_filtered ' + \
         dataset_in + ' ' + well_type + ' wells.csv'
-    df = pd.read_csv(ifile_gwlevel_clean)
+    df = pd.read_csv(ifile_gwlevel_clean, encoding="ISO-8859-1")
     func_plot_gwlevel_vs_year(df, odir, well_type, dataset_in)
 
 # Map the location of measurements and generate gwlevel contours
@@ -86,7 +86,7 @@ if opt_map_gwlevel_in2D:
     domain = [xmin, xmax, ymin, ymax]
     ifile_gwlevel_clean = odir + 'df_filtered ' + \
         dataset_in + ' ' + well_type + ' wells.csv'
-    df = pd.read_csv(ifile_gwlevel_clean)
+    df = pd.read_csv(ifile_gwlevel_clean, encoding="ISO-8859-1")
     func_map_gwlevel_in2D(df, domain, levels, opt_contour,
                           show_well_loc, odir, well_type, dataset_in)
 
