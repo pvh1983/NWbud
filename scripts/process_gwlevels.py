@@ -39,9 +39,9 @@ opt_cleanup_data = False
 opt_plot_gwlevel_vs_year = False
 
 # [Step 3] Mapping in 2D ======================================================
-opt_map_gwlevel_in2D = False
-show_well_loc = False
-opt_contour = ''  # '_contour_' or leave it blank
+opt_map_gwlevel_in2D = True
+show_well_loc = True
+opt_contour = '_contour_'  # '_contour_' or leave it blank
 
 # [Step 4] Get mean and time series ===========================================
 opt_get_mean_gwlevel_given_year = False

@@ -264,9 +264,9 @@ if plt_time_series_at_given_points:
         sc2 = ax1.plot(x2, y2, ':^')
 
         if (i == 0 or i == 2 or i == 4):
-            ax1.set_ylabel('Annual Actual ET (mm)')
+            ax1.set_ylabel('Evapotranspiration (mm)')
 
-        ax1.set_ylim([0, 2000])
+        ax1.set_ylim([0, 4000])
         ax1.tick_params(axis='x', rotation=90)
 
         if loc_type == 'ground':
@@ -276,7 +276,7 @@ if plt_time_series_at_given_points:
 
         if (i == 0 and loc_type == 'ground'):
             ax1.legend(['FAO_WaPOR', 'USGS MODIS',
-                        'Penman Monteith'], fontsize=8)
+                        'Penman Monteith'], fontsize=8, loc='upper left')
         elif (i == 0 and loc_type == 'borehole'):
             ax1.legend(['FAO_WaPOR', 'USGS MODIS'], fontsize=8)
 
@@ -298,7 +298,7 @@ if plt_time_series_at_given_points:
     ofile = '../output/EVT_time_series_comparison_' + loc_type + '.png'
     plt.savefig(ofile, dpi=300, transparent=False)  # bbox_inches='tight'
 
-    # Plot total volume of ET
+    # Plot 2: Total volume of ET
     fig2, ax2 = plt.subplots(nrows=1, ncols=1, figsize=(6, 5))
 
     x1 = df_fao['Date']

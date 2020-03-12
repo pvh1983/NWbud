@@ -16,7 +16,7 @@ def read_data(idir, ifiles, arr_dim):  # Read ifiles and save to a numpy arrya
         #
         data = data[data[:, 0] <= 827871.400]
         data = data[data[:, 1] <= 2493481.000]
-        
+
         #
         z = np.reshape(data[:, 2], [ncols, nrows])
         x = np.unique(data[:, 0])/1e6
@@ -29,6 +29,7 @@ def read_data(idir, ifiles, arr_dim):  # Read ifiles and save to a numpy arrya
         z[z == -99999] = np.nan
         #z[z < 0.1] = np.nan
         zall[:, :, i] = z
+
     return x, y, zall
 
 
