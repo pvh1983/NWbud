@@ -5,7 +5,7 @@ import numpy as np
 # from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
-def read_data(idir, ifiles, arr_dim):  # Read ifiles and save to a numpy arrya
+def read_data(idir, ifiles, arr_dim):  # Read old Dennis files and save to a numpy arrya
     nrows, ncols, nlays = arr_dim
     zall = np.empty(shape=arr_dim)
     for i, geon in enumerate(ifiles):
@@ -33,6 +33,35 @@ def read_data(idir, ifiles, arr_dim):  # Read ifiles and save to a numpy arrya
     return x, y, zall
 
 
+# Read NEW A.G. files and save to a numpy arrya
+def read_data2(idir, ifiles, arr_dim, scale_unit):
+    nrows, ncols, nlays = arr_dim
+    zall = np.empty(shape=arr_dim)
+    for i, geon in enumerate(ifiles):
+        geo_name = geon
+        ifile = idir + geo_name + '.csv'
+        print(f'\nReading input file {i+1}: {ifile}\n')
+        data = np.loadtxt(ifile, delimiter=',', skiprows=1)
+
+        #
+        #data = data[data[:, 0] <= 827871.400]
+        #data = data[data[:, 1] <= 2493481.000]
+
+        #
+        z = np.reshape(data[:, 3], [nrows, ncols])
+        x = np.unique(data[:, 1])/scale_unit
+    #    x = np.sort(x)
+        y = np.unique(data[:, 2])/scale_unit
+    #    y = np.sort(y)
+        #z = np.reshape(data[:, 2], [ncols, nrows])
+        #z = np.transpose(z)
+        z = np.flipud(z)
+        #z[z < 0] = np.nan
+        zall[:, :, i] = z
+
+    return x, y, zall
+
+
 def fig_font_size():
     SMALL_SIZE = 8
     MEDIUM_SIZE = 10
@@ -54,7 +83,7 @@ def gen_outdir(odir):
         print(f'\nCreated directory {odir}\n')
 
 
-def get_geo_units():
+def get_geo_units():  # Old files from Dennis
     geo_units_th = ['Cont_Term_Map_XS_TVT_2m_grd_zm',
                     # 'Paleo_Map_XS_TVT_2m_grd_zm',
                     'Cret_Sup_Map_XS_TVT_2m_grd_zm',
@@ -80,6 +109,26 @@ def get_geo_units():
                            'Jurassic',
                            'Triassic',
                            'Carbonifere and Basement']
+    return geo_units_th, geo_units_ele, geo_units_real_name
+
+
+def get_geo_units_new():  # New files from AG
+    geo_units_th = ['ISOPACH_CT',
+                    'ISOPACH_SENONIAN',
+                    'ISOPACH_CH',
+                    'ISOPACH_Ci',
+                    ]
+    geo_units_ele = ['Land_surface',
+                     'ISOPACH_CT',
+                     'ISOPACH_SENONIAN',
+                     'ISOPACH_CH',
+                     'ISOPACH_Ci']
+    #
+    geo_units_real_name = ['Continental Terminal (CT)',
+                           'Combined Paleocene and upper Cretaceous',
+                           'Continental Hamadien (CH)',
+                           'Continental Intercalaire (Ci)',
+                           ]
     return geo_units_th, geo_units_ele, geo_units_real_name
 
 

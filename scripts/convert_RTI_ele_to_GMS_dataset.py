@@ -9,31 +9,99 @@ import numpy as np
 '''
 Read RTI elevation files and convert it to GMS dataset
 
+Notes: 
+    - Specify a new output folder if needed (odir)
+    - Change dataset_name (top_m or bot_m)
+To run the script: 
+    - Go to the scripts folder
+    - Type: python convert_RTI_ele_to_GMS_dataset.py
+    - Make sure you place the input/output folders, 
+      at the same level with scripts folder
+
 '''
 
 # cd c:\Users\hpham\Documents\P32_Niger_2019\NWbud\scripts\
 
 # Define some input parameters
-nrows, ncols, nlays = 673, 771, 2
+grid_size = 2000*2000  # m2
+fsize = 12
+nrows, ncols, nlays = 537, 669,  4
 ncells = nrows*ncols*nlays
-dataset_name = 'top_m'  # 'top_m' or 'bot_m'
-opt_plot_ele = True
 
+dataset_name = 'bot_m'  # 'top_m' or 'bot_m'
+
+opt_plot_ele = True
 # Define some plot options
 cmap = plt.get_cmap('jet')  # RdYlBu, gist_rainbow, bwr, jet, BuGn_r,
 levels = np.linspace(-3000, 1000, 21)
 norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
 fsize = 12
 
+# get name of geologic units
+# Old data from Dennis
+# geo_units_th, geo_units_ele, geo_units_real_name = get_geo_units()  # old data from Dennis
+# New ISOPACH from AG, March 2020
+geo_units_th, geo_units_ele, geo_units_real_name = get_geo_units_new()
 
 # Open RTI elevation files
 
+
+# Read input data =============================================================
+#idir = r'../input/RTI_thickness_v3_April2020/'
+
+idir = r'../input/RTI_thickness_v2_Mar2020/'
+
+arr_dim = (nrows, ncols, nlays+1)
+# x, y, zall = read_data(idir, geo_units_th, arr_dim)  # Old data Dennis
+
+# Creat a new folder to save figures
+odir = '../output/top_ele_15KM_resampled2KM/'
+gen_outdir(odir)
+
+# NEW data from AG, format exported from arcmap table
+scale_unit = 1e6  # Convert (UTM_m) to (UTM_m x 1e6)
+x, y, zall_tmp = read_data2(idir, geo_units_ele, arr_dim, scale_unit)
+#zall[zall < 0.1] = np.nan
+fig_id = ['a', 'b', 'c', 'd']
+
+# Get elevation
+z0 = zall_tmp[:, :, 0]
+th = zall_tmp[:, :, 1:]
+th[th < 0] = 0
+zall_ele = zall_tmp.copy()
+
+z1 = z0 - th[:, :, 0]
+z2 = z1 - th[:, :, 1]
+z3 = z2 - th[:, :, 2]
+z4 = z3 - th[:, :, 3]
+
+zall_ele[:, :, 0] = z0
+zall_ele[:, :, 1] = z1
+zall_ele[:, :, 2] = z2
+zall_ele[:, :, 3] = z3
+zall_ele[:, :, 4] = z4
+
+'''
+for i in range(1,6,1):
+    z_tmp = zall_ele[:, :, i]
+'''
+
+'''
+#zall_ele[:, :, 1] = th[:, :, 1] - z0
+for i in range(1, 1, nlays+1):
+    print(f'i={i}')
+    zall_ele[:, :, i] = zall_ele[:, :, i-1] - th[:, :, i]
+    print(f'{zall_ele[250, 250, i]}')
+'''
+
 if dataset_name == 'top_m':
-    geo_units = ['Cont_Term_Map_XS_2m_grd_zm',
-                 'Cret_Sup_Map_XS_2m_grd_zm']  # 'Socle_Skua_Map_XS_2m_grd_zm'
+    geo_units = geo_units_ele.copy()
+    geo_units.remove('ISOPACH_Ci')
+    zall = zall_ele[:, :, :-1]
 elif dataset_name == 'bot_m':
-    geo_units = ['Cret_Sup_Map_XS_2m_grd_zm',
-                 'Cont_Ham_Map_XS_2m_grd_zm']
+    geo_units = geo_units_ele.copy()
+    geo_units.remove('Land_surface')
+    zall = zall_ele[:, :, 1:]
 
 #
 ofile = '../output/dataset_' + dataset_name + '.dat'
@@ -50,30 +118,12 @@ fid.write('TS 1 0\n')
 #cell_flag = np.empty(shape=(ncells, 1))
 ele = np.empty(shape=(ncells, 1))
 for i, geon in enumerate(geo_units):
-    geo_name = geon
-    ifile = '../input/RTI_layer_ele/' + geo_name + '.txt'
-    data = np.loadtxt(ifile, delimiter=',')
-    if i == 0:  # Process 'MNT_Skua_2m_grd_zm' because it has one more row/col
-        data2 = data[data[:, 0] <= 827871.400]
-        data3 = data2[data2[:, 1] <= 2493481.000]
-        z = np.reshape(data3[:, 2], [ncols, nrows])
-        #print(f'i={i}, size={data3.shape}\n')
-    else:
-        z = np.reshape(data[:, 2], [ncols, nrows])
-
-    # Test one point
-    z = np.transpose(z)  # use this if plotting.
-    #z[z == -99999] = np.nan
-    z = np.flipud(z)  # for GMS dataset
-    z2 = np.reshape(z, [nrows*ncols, 1])
-    print(f'k={i}, z={z[389-1, 736-1]}, {geon}')
+    z = zall[:, :, i]
+    # z = np.flipud(z)
+    z2 = np.reshape(np.flipud(z), [nrows*ncols, 1])  # flipup for GMS dataset
+    #print(f'k={i}, z={z[389-1, 736-1]}, {geon}')
 
     if opt_plot_ele:
-        # Creat a new folder
-        odir = '../output/top_ele/'
-        gen_outdir(odir)
-        x = np.unique(data[:, 0])/1e6
-        y = np.unique(data[:, 1])/1e6
 
         zmin, zmax = round(np.nanmin(z), -2), round(np.nanmax(z), -2)
         print(f'i={i}, zmin={zmin}, zmax={zmax}')
@@ -82,10 +132,10 @@ for i, geon in enumerate(geo_units):
 
         fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(4, 4.6),
                                 sharey=False)
-        grid_plot(geo_name, i, x, y, z, cmap, norm,
+        grid_plot(geon, i, x, y, z, cmap, norm,
                   levels, fsize, odir, fig, axs)
         # Save file
-        ofile = odir + dataset_name + ' ' + geo_name + '.png'
+        ofile = odir + dataset_name + ' ' + geon + '.png'
         fig.savefig(ofile, dpi=150, transparent=False, bbox_inches='tight')
         print(f'Saved {ofile}')
         #
@@ -109,6 +159,7 @@ cell_flag[cell_flag == -99999] = 0
 #
 np.savetxt(fid, cell_flag, fmt='%d')
 ele[ele == -99999] = -99
+#ele[ele < 0] = 0
 np.savetxt(fid, ele, fmt='%7.3f')
 
 fid.write('ENDDS\n')

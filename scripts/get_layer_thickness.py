@@ -24,7 +24,7 @@ plot_top_ele_in_one_fig = False  # Subplots: all units in one fig
 plot_th_DIFF = False
 
 # Plot a single unit
-plot_th_one_unit = True
+plot_th_one_unit = False
 
 # get name of geologic units
 geo_units_th, geo_units_ele, geo_units_real_name = get_geo_units()
